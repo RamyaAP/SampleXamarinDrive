@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Android.App;
@@ -18,6 +20,10 @@ using Android.Gms.Auth.Api.SignIn;
 using Android.Gms.Auth.Api;
 using Android.Gms.Drive;using Java.Lang;
 using Newtonsoft.Json;
+
+using Org.Apache.Http.Client.Methods;
+using Org.Apache.Http.Entity;
+using Org.Apache.Http.Impl.Client;
 using RestSharp;
 using Task = Android.Gms.Tasks.Task;
 using Xamarin.Auth;
@@ -59,11 +65,11 @@ namespace SigninQuickstart
                 
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
-                
-                   UploadFile(e.Account.Properties["access_token"], "ram");
-                   //  SaveAccount(e.Account);
-                   //  RetriveAccount();
 
+               //  UploadFile(e.Account.Properties["access_token"], "Test");
+                //  SaveAccount(e.Account);
+                //  RetriveAccount();
+              System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
             }
             else
             {
@@ -94,19 +100,42 @@ namespace SigninQuickstart
 
             var bytes = t;// File.ReadAllBytes(@"C:\Users\z003d4ks\source\repos\Ramya\Ramya\ram\mypdf.pdf");
 
-            var  content = new { title = "myPdf.pdf", description = "myPdf.pdf", parents = new[] { new { id = parentId } }, mimeType = "application/pdf" };
+            var  content = new { name = "myPdf.pdf", description = "myPdf.pdf", parents = new[] { new { id = parentId } }, mimeType = "application/pdf" };
 
             var data = JsonConvert.SerializeObject(content);
+
+           
 
             request.AddFile("content", Encoding.UTF8.GetBytes(data), "content", "application/json; charset=utf-8");
 
             request.AddFile("myPdf.pdf", bytes, "myPdf.pdf", "application/pdf");
+            
 
             var response = client.Execute(request);
 
             if (response.StatusCode != HttpStatusCode.OK) throw new Exception("Unable to upload file to google drive");
         }
 
+        public static async void CreateFolder(string token)
+
+        {
+            var client= new HttpClient();
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.Add("name", "Test folder");
+            jsonObject
+                .Add("mimeType", "application/vnd.google-apps.folder");
+            var data = JsonConvert.SerializeObject(jsonObject);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+           var response= await client.PostAsync("https://www.googleapis.com/drive/v3/files",new StringContent(data,Encoding.UTF8, "application/json"));
+          
+           
+        
+
+          
+
+           
+           
+        }
        
 
         private async void SaveAccount(Account account)
