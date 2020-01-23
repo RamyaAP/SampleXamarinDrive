@@ -65,14 +65,15 @@ namespace SigninQuickstart
                 
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
+                   UploadFileUsingResumable(e.Account.Properties["access_token"]);
 
-                   var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
-                UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
-                //  SaveAccount(e.Account);
-                //  RetriveAccount();
-                //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
-             //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
-              //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
+                   //  var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
+                   //   UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
+                   //  SaveAccount(e.Account);
+                   //  RetriveAccount();
+                   //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
+                   //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
+                   //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
             }
             else
             {
@@ -103,15 +104,17 @@ namespace SigninQuickstart
 
             var bytes = t;// File.ReadAllBytes(@"C:\Users\z003d4ks\source\repos\Ramya\Ramya\ram\mypdf.pdf");
 
-            var  content = new { name = "myPdf.pdf", description = "myPdf.pdf", parents = new[] { new { id = parentId } }, mimeType = "application/pdf" };
+          var a= "{ 'name' : 'kkPdf.pdf', 'mimeType': 'application/pdf', 'parents' : [{'id': '1ZDFrh_idqo3GcY3QR-BSBgaBXLNwkX0x'}] }";
+
+var  content = new { name = "kkPdf.pdf", description = "kkPdf.pdf", parents = new[] { new { id = parentId } }, mimeType = "application/pdf" };
 
             var data = JsonConvert.SerializeObject(content);
 
            
 
-            request.AddFile("content", Encoding.UTF8.GetBytes(data), "content", "application/json; charset=utf-8");
+    request.AddFile("content", Encoding.UTF8.GetBytes(a), "content", "application/json; charset=utf-8");
 
-            request.AddFile("myPdf.pdf", bytes, "myPdf.pdf", "application/pdf");
+            request.AddFile("kkPdf.pdf", bytes, "kkPdf.pdf", "application/pdf");
             
 
             var response = client.Execute(request);
@@ -119,16 +122,82 @@ namespace SigninQuickstart
             if (response.StatusCode != HttpStatusCode.OK) throw new Exception("Unable to upload file to google drive");
         }
 
+        public static async void UploadFileUsingResumable(string accessToken)
+        {
 
-        public static async void UploadFileUsingHttpClient()
+            // FileInfo fi = new FileInfo(@"D:\Data\Vatan\Neon Team\Ramya\2\SampleXamarinDrive\ConsoleApp1\PDF\Helloworld.pdf");
+          
+
+           // AssetFileDescriptor fd = Application.Context.Assets.OpenFd("myPdf.pdf");
+            //long size = fd.Length;
+
+            HttpClient client = new HttpClient();
+
+
+
+                string body = "{\"name\": \"" + "myPdf.pdf" + "\", \"parents\": [\"" + "1kp8yKVoiKJoBNdZntZArv7jdpb8iCmJn" + "\"]}";
+
+
+
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer "+ accessToken); //= new AuthenticationHeaderValue("Bearer ya29.Il-6B4y29VzdgU3fR8a9fcxBun8wHBhn0MbO3KQRcdeNDKK84KWShETsV0Dj1TnFfGcL68irFqQskQf-TzyRmXZl2OI0ZV2jCZ1J6v7I0F-EV8VYPM8FeiUVwdT6596yGA"); 
+                client.DefaultRequestHeaders.Add("X-Upload-Content-Type", "application/pdf");
+                client.DefaultRequestHeaders.Add("X-Upload-Content-Length", "31521");
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post,
+                    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable");
+                request.Content = new StringContent(body);
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                var response1 = await client.SendAsync(request);
+                var uri = response1.Headers.Location;
+
+                //client.DefaultRequestHeaders.Add("Content-Type","application/json; charset=UTF-8");
+                // var bodyLength = Encoding.ASCII.GetBytes(body).Length;
+                //client.DefaultRequestHeaders.Add("Content-Length",bodyLength);
+
+            //HttpContent ct = new StringContent(body);
+            //    ct.Headers.ContentLength = bodyLength;
+            //    ct.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+
+
+            //    try
+            //    {
+            //        var response =
+            //            await client.PostAsync("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+            //                ct);
+            //        string Location = response.Headers.Location.AbsolutePath;
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        Console.WriteLine(e);
+            //        throw;
+            //    }
+
+
+
+
+
+        }
+
+        public static async void UploadFileUsingHttpClient(string token)
         {
 
             HttpClient client = new HttpClient();
 
             MultipartFormDataContent form = new MultipartFormDataContent();
 
+            HttpContent content = new StringContent("fileToUpload");
+            form.Add(content, "fileToUpload");
+            
+            Stream stream = Application.Context.Assets.Open("myPdf");
+            content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
+            {
+                Name = "myPdf",
+                FileName = "myPdf",
+                
+            };
+            form.Add(content);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            var response = await client.PostAsync("https://www.googleapis.com/drive/v3/files", new StringContent(data, Encoding.UTF8, "application/json"));
+            var response = await client.PostAsync("https://www.googleapis.com/drive/v3/files", form);
         }
         public static async void CreateFolder(string token)
 
