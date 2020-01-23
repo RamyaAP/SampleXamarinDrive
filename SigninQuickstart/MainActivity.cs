@@ -66,10 +66,13 @@ namespace SigninQuickstart
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
 
-               //  UploadFile(e.Account.Properties["access_token"], "Test");
+                   var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
+                UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
                 //  SaveAccount(e.Account);
                 //  RetriveAccount();
-              System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
+                //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
+             //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
+              //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
             }
             else
             {
@@ -116,6 +119,17 @@ namespace SigninQuickstart
             if (response.StatusCode != HttpStatusCode.OK) throw new Exception("Unable to upload file to google drive");
         }
 
+
+        public static async void UploadFileUsingHttpClient()
+        {
+
+            HttpClient client = new HttpClient();
+
+            MultipartFormDataContent form = new MultipartFormDataContent();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var response = await client.PostAsync("https://www.googleapis.com/drive/v3/files", new StringContent(data, Encoding.UTF8, "application/json"));
+        }
         public static async void CreateFolder(string token)
 
         {
@@ -125,18 +139,37 @@ namespace SigninQuickstart
             jsonObject
                 .Add("mimeType", "application/vnd.google-apps.folder");
             var data = JsonConvert.SerializeObject(jsonObject);
+          
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
            var response= await client.PostAsync("https://www.googleapis.com/drive/v3/files",new StringContent(data,Encoding.UTF8, "application/json"));
-          
-           
-        
 
-          
 
-           
-           
         }
-       
+
+        public static async void GetFolders(string token)
+
+        {
+            var client = new HttpClient();
+            
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+           
+            var response =
+                await client.GetAsync(
+                    "https://www.googleapis.com/drive/v3/files");
+            var contents = await response.Content.ReadAsStringAsync();
+        }
+
+        public static async void Delete(string token)
+        {
+            var client = new HttpClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response =
+                await client.DeleteAsync(
+                    "https://www.googleapis.com/drive/v3/files/1hgmhv7ALyuaL33eFK-iYRu3ojgtZZpxh");
+            var contents = await response.Content.ReadAsStringAsync();
+        }
 
         private async void SaveAccount(Account account)
         {
