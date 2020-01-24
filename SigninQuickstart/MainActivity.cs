@@ -69,7 +69,7 @@ namespace SigninQuickstart
                 
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
-                   UploadFileUsingResumable(e.Account.Properties["access_token"]);
+                  // UploadFileUsingResumable(e.Account.Properties["access_token"]);
 
                    //  var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
                    //   UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
@@ -78,6 +78,7 @@ namespace SigninQuickstart
                    //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
                    //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
                    //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
+                   DownloadFile(e.Account.Properties["access_token"],"");
             }
             else
             {
@@ -176,17 +177,38 @@ var  content = new { name = "kkPdf.pdf", description = "kkPdf.pdf", parents = ne
 
         }
 
-        public static async void DownloadFile(string token)
+        public static async void DownloadFile(string accessToken, string fileId)
         {
+
+
 
             var client = new HttpClient();
 
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
+
+            //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+            
             var response =
                 await client.GetAsync(
-                    "https://www.googleapis.com/drive/v3/files");
-            var contents = await response.Content.ReadAsStringAsync();
+                    "https://www.googleapis.com/drive/v3/files/1XU-sOiil3fej3p3oSjXyfbfuJJ6qFIu1?fields=*&alt=media");
+
+
+
+            if (response.IsSuccessStatusCode)
+            {
+                var  contents = await response.Content.ReadAsStreamAsync();
+                 Stream inputStream = contents;
+                 string path = Path.Combine(Android.OS.Environment.ExternalStorageDirectory.AbsolutePath,
+                     "Backup-MobileFitting");
+
+                Stream outputStream = File.OpenWrite(Path.Combine(path, "t.1"));
+               await inputStream.CopyToAsync(outputStream);
+
+            }
+
+          
+
             //1XXTBgMVgmFa7PBcvOvKD0tdGxV7RogS5
         }
 
