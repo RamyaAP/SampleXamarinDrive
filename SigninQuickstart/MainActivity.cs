@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -18,7 +19,9 @@ using Android.Gms.Common;
 using Android.Util;
 using Android.Gms.Auth.Api.SignIn;
 using Android.Gms.Auth.Api;
-using Android.Gms.Drive;using Java.Lang;
+using Android.Gms.Drive;
+using Java.IO;
+using Java.Lang;
 using Newtonsoft.Json;
 
 using Org.Apache.Http.Client.Methods;
@@ -28,6 +31,7 @@ using RestSharp;
 using Task = Android.Gms.Tasks.Task;
 using Xamarin.Auth;
 using Exception = System.Exception;
+using File = System.IO.File;
 
 namespace SigninQuickstart
 {
@@ -135,49 +139,73 @@ var  content = new { name = "kkPdf.pdf", description = "kkPdf.pdf", parents = ne
 
 
 
-                string body = "{\"name\": \"" + "myPdf.pdf" + "\", \"parents\": [\"" + "1kp8yKVoiKJoBNdZntZArv7jdpb8iCmJn" + "\"]}";
+                string body = "{\"name\": \"" + "t" + "\", \"parents\": [\"" + "1kp8yKVoiKJoBNdZntZArv7jdpb8iCmJn" + "\"]}";
 
 
 
                 client.DefaultRequestHeaders.Add("Authorization", "Bearer "+ accessToken); //= new AuthenticationHeaderValue("Bearer ya29.Il-6B4y29VzdgU3fR8a9fcxBun8wHBhn0MbO3KQRcdeNDKK84KWShETsV0Dj1TnFfGcL68irFqQskQf-TzyRmXZl2OI0ZV2jCZ1J6v7I0F-EV8VYPM8FeiUVwdT6596yGA"); 
-                client.DefaultRequestHeaders.Add("X-Upload-Content-Type", "application/pdf");
-                client.DefaultRequestHeaders.Add("X-Upload-Content-Length", "31521");
+                client.DefaultRequestHeaders.Add("X-Upload-Content-Type", "*/*");
+                client.DefaultRequestHeaders.Add("X-Upload-Content-Length", GetFileSize().ToString());
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post,
                     "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable");
                 request.Content = new StringContent(body);
+              
                 request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 var response1 = await client.SendAsync(request);
                 var uri = response1.Headers.Location;
-
-                //client.DefaultRequestHeaders.Add("Content-Type","application/json; charset=UTF-8");
-                // var bodyLength = Encoding.ASCII.GetBytes(body).Length;
-                //client.DefaultRequestHeaders.Add("Content-Length",bodyLength);
-
-            //HttpContent ct = new StringContent(body);
-            //    ct.Headers.ContentLength = bodyLength;
-            //    ct.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                
 
 
 
-            //    try
-            //    {
-            //        var response =
-            //            await client.PostAsync("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
-            //                ct);
-            //        string Location = response.Headers.Location.AbsolutePath;
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        Console.WriteLine(e);
-            //        throw;
-            //    }
 
+                Stream stream = Application.Context.Assets.Open("t");
 
+            HttpClient clientUpload=new HttpClient();
+            clientUpload.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+            long size = GetFileSize();
+          
+                HttpContent content= new StreamContent(stream);
+          content.Headers.ContentType= new MediaTypeHeaderValue("*/*");
+          content.Headers.ContentLength = GetFileSize();
+        
+          var response =
+                            await clientUpload.PutAsync(uri,content);
 
+            var contents = await response.Content.ReadAsStringAsync();
 
 
         }
 
+        public static async void DownloadFile(string token)
+        {
+
+            var client = new HttpClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response =
+                await client.GetAsync(
+                    "https://www.googleapis.com/drive/v3/files");
+            var contents = await response.Content.ReadAsStringAsync();
+            //1XXTBgMVgmFa7PBcvOvKD0tdGxV7RogS5
+        }
+
+        public static long GetFileSize()
+        {
+            byte[] t;
+            AssetManager assets = Application.Context.Assets;
+            using (StreamReader sr = new StreamReader(assets.Open("t")))
+            {
+                t = default(byte[]);
+                using (var memstream = new MemoryStream())
+                {
+                    sr.BaseStream.CopyTo(memstream);
+                    t = memstream.ToArray();
+                }
+
+            }
+            return t.Length;
+        }
         public static async void UploadFileUsingHttpClient(string token)
         {
 

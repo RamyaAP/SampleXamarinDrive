@@ -204,6 +204,7 @@
   </ItemGroup>
   <ItemGroup>
     <AndroidAsset Include="Assets\myPdf.pdf" />
+    <AndroidAsset Include="Assets\t" />
     <None Include="packages.config" />
     <None Include="Resources\AboutResources.txt" />
     <None Include="Properties\AndroidManifest.xml">
