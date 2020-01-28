@@ -107,69 +107,47 @@ namespace SigninQuickstart
             }
         }
 
-
-        public static void UploadFile(string accessToken, string folderId)
+        public static async Task<bool> UploadFileUsingResumable(string accessToken, string filePath)
         {
-            var client = new RestClient { BaseUrl = new Uri("https://www.googleapis.com/") };
+            //Check if expected folder exist
+            var folder = (await GetFoldersByBrand(accessToken, "Backup-MobileFitting")).FirstOrDefault();
 
-            var request = new RestRequest($"/upload/drive/v3/files?uploadType=multipart&access_token={accessToken}", Method.POST);
-            // Stream stream = Application.Context.Assets.Open("myPdf");
-            byte[] t;
-            AssetManager assets = Application.Context.Assets;
-            using (StreamReader sr = new StreamReader(assets.Open("myPdf.pdf")))
+            if (folder!=null)
             {
-                 t = default(byte[]);
-                using (var memstream = new MemoryStream())
+                //Check if file already exist to the folder.
+                if (await IsFileExistForFolder("t",folder.Id,accessToken))
                 {
-                    sr.BaseStream.CopyTo(memstream);
-                    t = memstream.ToArray();
+                    return false;
                 }
-
+                else
+                {
+                    await UploadFile(accessToken, folder.Id);
+                }
             }
-
-
-            var bytes = t;// File.ReadAllBytes(@"C:\Users\z003d4ks\source\repos\Ramya\Ramya\ram\mypdf.pdf");
-
-          var a= "{ 'name' : 'kkPdf.pdf', 'mimeType': 'application/pdf', 'parents' : [{'id': '"+folderId+"'}] }";
-
-          var  content = new { name = "kkPdf.pdf", description = "kkPdf.pdf", parents = new[] { new { id = folderId } }, mimeType = "application/pdf" };
-
-            var data = JsonConvert.SerializeObject(content);
-
-           
-
-    request.AddFile("content", Encoding.UTF8.GetBytes(a), "content", "application/json; charset=utf-8");
-
-            request.AddFile("kkPdf.pdf", bytes, "kkPdf.pdf", "application/pdf");
-            
-
-            var response = client.Execute(request);
-
-            if (response.StatusCode != HttpStatusCode.OK) throw new Exception("Unable to upload file to google drive");
+            else
+            {
+                    CreateFolder(accessToken,"Backup-MobileFitting");
+                    await UploadFileUsingResumable(accessToken, filePath);
+            }
+            return true;
         }
 
-        public static async void UploadFileUsingResumable(string accessToken, string folderId, string filePath)
+        private static async System.Threading.Tasks.Task UploadFile(string accessToken, string folderId)
         {
             //Look for filePath correction
             //FileInfo file = new FileInfo(filePath);
             var sessionRequest = new HttpRequestMessage(HttpMethod.Post, "upload/drive/v3/files?uploadType=resumable");
-            sessionRequest.Headers.Add("Authorization", "Bearer "+ accessToken);
+            sessionRequest.Headers.Add("Authorization", "Bearer " + accessToken);
             sessionRequest.Headers.Add("X-Upload-Content-Type", "*/*");
             sessionRequest.Headers.Add("X-Upload-Content-Length", GetFileSize().ToString());
 
-            //Check if file already exist to the folder.
-            if (await IsFileExistForFolder("t",folderId,accessToken))
-            {
-                return;
-            }
-            
             string body = "{\"name\": \"" + "t" + "\", \"parents\": [\"" + folderId + "\"]}";
             sessionRequest.Content = new StringContent(body);
             sessionRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            
-            var sessionResponse = await _httpClient.SendAsync(sessionRequest); 
+
+            var sessionResponse = await _httpClient.SendAsync(sessionRequest);
             var sessionUri = sessionResponse.Headers.Location;
-            
+
             Stream stream = Application.Context.Assets.Open("t");
 
             var uploadRequest = new HttpRequestMessage(HttpMethod.Post, sessionUri.PathAndQuery);
@@ -177,8 +155,8 @@ namespace SigninQuickstart
             uploadRequest.Headers.Add("Authorization", "Bearer " + accessToken);
 
             //Creating Content (Body)
-            HttpContent content= new StreamContent(stream);
-            content.Headers.ContentType= new MediaTypeHeaderValue("*/*");
+            HttpContent content = new StreamContent(stream);
+            content.Headers.ContentType = new MediaTypeHeaderValue("*/*");
             content.Headers.ContentLength = GetFileSize();
 
             //Attaching body to request
@@ -254,28 +232,6 @@ namespace SigninQuickstart
             }
             return t.Length;
         }
-        public static async void UploadFileUsingHttpClient(string token)
-        {
-
-            HttpClient client = new HttpClient();
-
-            MultipartFormDataContent form = new MultipartFormDataContent();
-
-            HttpContent content = new StringContent("fileToUpload");
-            form.Add(content, "fileToUpload");
-            
-            Stream stream = Application.Context.Assets.Open("myPdf");
-            content.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
-            {
-                Name = "myPdf",
-                FileName = "myPdf",
-                
-            };
-            form.Add(content);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            var response = await client.PostAsync("https://www.googleapis.com/drive/v3/files", form);
-        }
-
 
         public static async void CreateFolder(string accessToken, string brandFolderName)
         {
@@ -296,14 +252,15 @@ namespace SigninQuickstart
 
             request.Content = new StringContent(data, Encoding.UTF8, "application/json");
             var responce = await _httpClient.SendAsync(request);
+            var mm = responce.Content.ReadAsStringAsync();
             responce.EnsureSuccessStatusCode();
         }
 
         public static async Task<List<GoogleDriveItemInfo>> GetFoldersByBrand(string accessToken, string brand="Backup-MobileFitting")
         {
-            //https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'Backup-Fit2Go'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+mimeType%29&files[orderBy]=modifiedTime
+            //https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'Backup-MobileFitting'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+trashed%2C+mimeType%29&files[orderBy]=modifiedTime
             
-            var request = new HttpRequestMessage(HttpMethod.Get, $"drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'{brand}'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+mimeType%29&files[orderBy]=modifiedTime");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'{brand}'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+trashed%2C+mimeType%29&files[orderBy]=modifiedTime");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
 
             var response = await _httpClient.SendAsync(request);
@@ -312,7 +269,7 @@ namespace SigninQuickstart
 
             var items = JsonConvert.DeserializeObject<GoogleDriveItems>(content);
 
-            return items.Files.Where(x => x.MimeType == "application/vnd.google-apps.folder").ToList();
+            return items.Files.Where(x => x.MimeType == "application/vnd.google-apps.folder" && x.Trashed==false).ToList();
 
         }
 

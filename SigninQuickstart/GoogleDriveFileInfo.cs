@@ -24,5 +24,6 @@ namespace SigninQuickstart
         public string[] Parents { get; set; }
         public string MimeType { get; set; }
         public DateTime ModifiedTime { get; set; }
+        public bool Trashed { get; set; }
     }
 }
