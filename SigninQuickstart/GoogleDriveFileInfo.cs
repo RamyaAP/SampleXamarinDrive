@@ -14,7 +14,7 @@ namespace SigninQuickstart
 {
     public class GoogleDriveItems
     {
-        public GoogleDriveItemInfo[] GoogleDriveItemsInfo { get; set; }
+        public GoogleDriveItemInfo[] Files { get; set; }
     }
 
     public class GoogleDriveItemInfo
@@ -23,7 +23,6 @@ namespace SigninQuickstart
         public string Name { get; set; }
         public string[] Parents { get; set; }
         public string MimeType { get; set; }
-        public string ModifiedTime { get; set; }
+        public DateTime ModifiedTime { get; set; }
     }
 }
-

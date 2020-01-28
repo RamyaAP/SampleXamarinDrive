@@ -86,7 +86,7 @@ namespace SigninQuickstart
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
                 //GetGdriveItemsInfoAsync(e.Account.Properties["access_token"]);
                 //Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
-                //CreateFolder(e.Account.Properties["access_token"],)
+                CreateFolder(e.Account.Properties["access_token"], "Backup-MobileFitting");
                 //GetFoldersByBrand(e.Account.Properties["access_token"]);
                 //UploadFileUsingResumable(e.Account.Properties["access_token"],
                 //    "17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS", "");
@@ -202,7 +202,7 @@ namespace SigninQuickstart
         {
             var listFileInfo = await GetGdriveItemsInfoAsync(accessToken);
 
-            var isFileExist = listFileInfo.GoogleDriveItemsInfo.Any(x => x.Parents.Any(y => y.Contains(folderId)) && x.Name.ToLower() == fileName.ToLower());
+            var isFileExist = listFileInfo.Files.Any(x => x.Parents.Any(y => y.Contains(folderId)) && x.Name.ToLower() == fileName.ToLower());
             return isFileExist;
         }
 
@@ -312,7 +312,7 @@ namespace SigninQuickstart
 
             var items = JsonConvert.DeserializeObject<GoogleDriveItems>(content);
 
-            return items.GoogleDriveItemsInfo.Where(x => x.MimeType == "application/vnd.google-apps.folder").ToList();
+            return items.Files.Where(x => x.MimeType == "application/vnd.google-apps.folder").ToList();
 
         }
 
