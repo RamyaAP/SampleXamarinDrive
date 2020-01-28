@@ -84,22 +84,23 @@ namespace SigninQuickstart
                 
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
-                //GetGdriveItemsInfoAsync(e.Account.Properties["access_token"]);
-                //Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
-                CreateFolder(e.Account.Properties["access_token"], "Backup-MobileFitting");
-                //GetFoldersByBrand(e.Account.Properties["access_token"]);
-                //UploadFileUsingResumable(e.Account.Properties["access_token"],
-                //    "17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS", "");
-                //DownloadFile(e.Account.Properties["access_token"], "1_OUGARZznIekMIvJdUY92B6mcMcrev6L");
-                //CreateFolder(e.Account.Properties["access_token"]);
-                //  var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
-                //   UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
-                //  SaveAccount(e.Account);
-                //  RetriveAccount();
-                //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
-                //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
-                //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
-                //DownloadFile(e.Account.Properties["access_token"],"");
+                   UploadFileUsingResumable(e.Account.Properties["access_token"], "");
+                   //GetGdriveItemsInfoAsync(e.Account.Properties["access_token"]);
+                   //Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
+                   //CreateFolder(e.Account.Properties["access_token"], "Backup-MobileFitting");
+                   //GetFoldersByBrand(e.Account.Properties["access_token"]);
+                   //UploadFileUsingResumable(e.Account.Properties["access_token"],
+                   //    "17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS", "");
+                   //DownloadFile(e.Account.Properties["access_token"], "1_OUGARZznIekMIvJdUY92B6mcMcrev6L");
+                   //CreateFolder(e.Account.Properties["access_token"]);
+                   //  var a=System.Threading.Tasks.Task.Run(() => CreateFolder(e.Account.Properties["access_token"]));
+                   //   UploadFile(e.Account.Properties["access_token"], "1HaEE_nmZQc95J9g_bGYMl-2DQ0pQ_R4m");
+                   //  SaveAccount(e.Account);
+                   //  RetriveAccount();
+                   //System.Threading.Tasks.Task.Run(() =>  CreateFolder(e.Account.Properties["access_token"]) );
+                   //   System.Threading.Tasks.Task.Run(() =>  GetFolders(e.Account.Properties["access_token"]) );
+                   //  System.Threading.Tasks.Task.Run(() => Delete(e.Account.Properties["access_token"]));
+                   //DownloadFile(e.Account.Properties["access_token"],"");
             }
             else
             {
@@ -178,17 +179,21 @@ namespace SigninQuickstart
 
         public static async Task<bool> IsFileExistForFolder(string fileName, string folderId, string accessToken)
         {
-            var listFileInfo = await GetGdriveItemsInfoAsync(accessToken);
+            var listFileInfo = await GetFiles(folderId,accessToken);
 
-            var isFileExist = listFileInfo.Files.Any(x => x.Parents.Any(y => y.Contains(folderId)) && x.Name.ToLower() == fileName.ToLower());
+            var isFileExist = listFileInfo.Files.Any(x=>x.Name.ToLower().Equals(fileName.ToLower()) 
+                                                        && x.Trashed==false);
             return isFileExist;
         }
 
-        public static async Task<GoogleDriveItems> GetGdriveItemsInfoAsync(string accessToken)
+        public static async Task<GoogleDriveItems> GetFiles(string folderId, string accessToken)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "drive/v3/files?fields=files(id,name,parents,mimeType)");
+            //https://www.googleapis.com/drive/v3/files?q='17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS'+in+parents&fields=files%28id%2C+name%2C+parents%29
+            var request = new HttpRequestMessage(HttpMethod.Get, 
+                $"drive/v3/files?q='{folderId}'+in+parents&fields=files%28id%2C+name%2C+trashed%2C+parents%29");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
             request.Headers.Add("Accept", "application/json");
+            request.Headers.CacheControl = new CacheControlHeaderValue(){NoCache = true};
 
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
