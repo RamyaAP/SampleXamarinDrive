@@ -12,17 +12,18 @@ using Android.Widget;
 
 namespace SigninQuickstart
 {
-    public class GoogleDriveFileinfo
+    public class GoogleDriveItems
     {
-        public File[] Files { get; set; }
+        public GoogleDriveItemInfo[] GoogleDriveItemsInfo { get; set; }
     }
 
-    public class File
+    public class GoogleDriveItemInfo
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public string[] Parents { get; set; }
         public string MimeType { get; set; }
+        public string ModifiedTime { get; set; }
     }
 }
 

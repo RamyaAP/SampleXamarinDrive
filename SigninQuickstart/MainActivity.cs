@@ -85,7 +85,9 @@ namespace SigninQuickstart
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
                 //GetGdriveItemsInfoAsync(e.Account.Properties["access_token"]);
-                Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
+                //Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
+                //CreateFolder(e.Account.Properties["access_token"],)
+                //GetFoldersByBrand(e.Account.Properties["access_token"]);
                 //UploadFileUsingResumable(e.Account.Properties["access_token"],
                 //    "17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS", "");
                 //DownloadFile(e.Account.Properties["access_token"], "1_OUGARZznIekMIvJdUY92B6mcMcrev6L");
@@ -200,11 +202,11 @@ namespace SigninQuickstart
         {
             var listFileInfo = await GetGdriveItemsInfoAsync(accessToken);
 
-            var isFileExist = listFileInfo.Files.Any(x => x.Parents.Any(y => y.Contains(folderId)) && x.Name.ToLower() == fileName.ToLower());
+            var isFileExist = listFileInfo.GoogleDriveItemsInfo.Any(x => x.Parents.Any(y => y.Contains(folderId)) && x.Name.ToLower() == fileName.ToLower());
             return isFileExist;
         }
 
-        public static async Task<GoogleDriveFileinfo> GetGdriveItemsInfoAsync(string accessToken)
+        public static async Task<GoogleDriveItems> GetGdriveItemsInfoAsync(string accessToken)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "drive/v3/files?fields=files(id,name,parents,mimeType)");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
@@ -213,7 +215,7 @@ namespace SigninQuickstart
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<GoogleDriveFileinfo>(content);
+            return JsonConvert.DeserializeObject<GoogleDriveItems>(content);
         }
 
         public static async void DownloadFile(string accessToken, string fileId)
@@ -273,20 +275,21 @@ namespace SigninQuickstart
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             var response = await client.PostAsync("https://www.googleapis.com/drive/v3/files", form);
         }
-        public static async Task<bool> CreateFolder(string accessToken, string folderName)
+
+
+        public static async void CreateFolder(string accessToken, string brandFolderName)
         {
-            var gDriveItems = await GetGdriveItemsInfoAsync(accessToken);
-            if (gDriveItems.Files.Any(x=>x.Name.ToLower() == folderName.ToLower() 
-                                         && x.MimeType == "application/vnd.google-apps.folder"))
+            var gDriveItems = await GetFoldersByBrand(accessToken,brandFolderName);
+            if (gDriveItems.Any(x=>x.Name.ToLower() == brandFolderName.ToLower()))
             {
-                return false;
+                return;
             }
 
             var request = new HttpRequestMessage(HttpMethod.Post, "drive/v3/files");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
             
             JsonObject jsonFolderObject = new JsonObject();
-            jsonFolderObject.Add("name", folderName);
+            jsonFolderObject.Add("name", brandFolderName);
             jsonFolderObject
                 .Add("mimeType", "application/vnd.google-apps.folder");
             var data = JsonConvert.SerializeObject(jsonFolderObject);
@@ -294,13 +297,23 @@ namespace SigninQuickstart
             request.Content = new StringContent(data, Encoding.UTF8, "application/json");
             var responce = await _httpClient.SendAsync(request);
             responce.EnsureSuccessStatusCode();
-            return true;
         }
 
-        public static async void GetFolders(string accessToken)
+        public static async Task<List<GoogleDriveItemInfo>> GetFoldersByBrand(string accessToken, string brand="Backup-MobileFitting")
         {
-            var gDriveItems = await GetGdriveItemsInfoAsync(accessToken);
-            //var folders = gDriveItems.Files.Where(x=>x.)
+            //https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'Backup-Fit2Go'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+mimeType%29&files[orderBy]=modifiedTime
+            
+            var request = new HttpRequestMessage(HttpMethod.Get, $"drive/v3/files?supportsAllDrives=true&corpora=allDrives&includeItemsFromAllDrives=true&pageSize=1000&q=name%20%3D%20'{brand}'&fields=files%28id%2C+name%2C+parents%2C+modifiedTime%2C+mimeType%29&files[orderBy]=modifiedTime");
+            request.Headers.Add("Authorization", "Bearer "+ accessToken);
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+
+            var items = JsonConvert.DeserializeObject<GoogleDriveItems>(content);
+
+            return items.GoogleDriveItemsInfo.Where(x => x.MimeType == "application/vnd.google-apps.folder").ToList();
+
         }
 
         /// <summary>
@@ -315,6 +328,8 @@ namespace SigninQuickstart
 
             var response =
                 await _httpClient.SendAsync(request);
+
+            var content = response.Content.ReadAsStringAsync();
 
             response.EnsureSuccessStatusCode();
         }
