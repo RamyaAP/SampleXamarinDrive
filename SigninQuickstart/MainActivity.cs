@@ -84,12 +84,12 @@ namespace SigninQuickstart
                 
                    Log.Debug("tokentype", ""+e.Account.Properties["token_type"]);
                    Log.Debug("accessToken", "" + e.Account.Properties["access_token"]);
-                   UploadFileUsingResumable(e.Account.Properties["access_token"], "");
+                   //UploadFileUsingResumable(e.Account.Properties["access_token"], "");
                    //GetGdriveItemsInfoAsync(e.Account.Properties["access_token"]);
                    //Delete(e.Account.Properties["access_token"],"1EgR-GS5PxmIC92n2IruRuPFZJ8gLXKRzHzpZ9ZTKKJ8");
                    //CreateFolder(e.Account.Properties["access_token"], "Backup-MobileFitting");
                    //GetFoldersByBrand(e.Account.Properties["access_token"]);
-                   //UploadFileUsingResumable(e.Account.Properties["access_token"],
+                   UploadFileUsingResumable(e.Account.Properties["access_token"], "");
                    //    "17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS", "");
                    //DownloadFile(e.Account.Properties["access_token"], "1_OUGARZznIekMIvJdUY92B6mcMcrev6L");
                    //CreateFolder(e.Account.Properties["access_token"]);
@@ -116,13 +116,14 @@ namespace SigninQuickstart
             if (folder!=null)
             {
                 //Check if file already exist to the folder.
-                if (await IsFileExistForFolder("t",folder.Id,accessToken))
+                var file = await GetFileForFolder("t", folder.Id, accessToken);
+                if ( file != null)
                 {
-                    return false;
+                    await UploadFile(accessToken, folder.Id, true,file.Id);
                 }
                 else
                 {
-                    await UploadFile(accessToken, folder.Id);
+                    await UploadFile(accessToken, folder.Id, false);
                 }
             }
             else
@@ -133,11 +134,19 @@ namespace SigninQuickstart
             return true;
         }
 
-        private static async System.Threading.Tasks.Task UploadFile(string accessToken, string folderId)
+        private static async System.Threading.Tasks.Task UploadFile(string accessToken, string folderId, bool isUpdate=false, string fileId="")
         {
+            
             //Look for filePath correction
             //FileInfo file = new FileInfo(filePath);
-            var sessionRequest = new HttpRequestMessage(HttpMethod.Post, "upload/drive/v3/files?uploadType=resumable");
+            if (isUpdate)
+            {
+                await UpdateFile(accessToken,fileId);
+                return;
+            }
+
+            HttpRequestMessage sessionRequest = new HttpRequestMessage(HttpMethod.Post, "upload/drive/v3/files?uploadType=resumable");
+            var xx = GetFileSize().ToString();
             sessionRequest.Headers.Add("Authorization", "Bearer " + accessToken);
             sessionRequest.Headers.Add("X-Upload-Content-Type", "*/*");
             sessionRequest.Headers.Add("X-Upload-Content-Length", GetFileSize().ToString());
@@ -151,7 +160,7 @@ namespace SigninQuickstart
 
             Stream stream = Application.Context.Assets.Open("t");
 
-            var uploadRequest = new HttpRequestMessage(HttpMethod.Post, sessionUri.PathAndQuery);
+            var uploadRequest = new HttpRequestMessage(HttpMethod.Patch, sessionUri.PathAndQuery);
 
             uploadRequest.Headers.Add("Authorization", "Bearer " + accessToken);
 
@@ -177,20 +186,40 @@ namespace SigninQuickstart
             }
         }
 
-        public static async Task<bool> IsFileExistForFolder(string fileName, string folderId, string accessToken)
+        private static async System.Threading.Tasks.Task UpdateFile(string accessToken, string fileId)
+        {
+            
+            HttpRequestMessage sessionRequest = new HttpRequestMessage(HttpMethod.Patch, $"upload/drive/v3/files/{fileId}");
+
+
+            var xx = GetFileSize().ToString();
+            sessionRequest.Headers.Add("Authorization", "Bearer " + accessToken);
+            sessionRequest.Headers.Add("X-Upload-Content-Type", "*/*");
+            sessionRequest.Headers.Add("X-Upload-Content-Length", GetFileSize().ToString());
+
+            Stream stream = Application.Context.Assets.Open("t");
+            sessionRequest.Content = new StreamContent(stream);
+            sessionRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            var sessionResponse = await _httpClient.SendAsync(sessionRequest);
+            sessionResponse.EnsureSuccessStatusCode();
+        }
+
+        public static async Task<GoogleDriveItemInfo> GetFileForFolder(string fileName, string folderId, string accessToken)
         {
             var listFileInfo = await GetFiles(folderId,accessToken);
 
-            var isFileExist = listFileInfo.Files.Any(x=>x.Name.ToLower().Equals(fileName.ToLower()) 
-                                                        && x.Trashed==false);
-            return isFileExist;
+            var file = listFileInfo.Files.Where(x=>x.Name.ToLower().Equals(fileName.ToLower()) 
+                                                        && x.Trashed==false).OrderByDescending(x=>x.ModifiedTime).FirstOrDefault();
+
+            return file;
         }
 
         public static async Task<GoogleDriveItems> GetFiles(string folderId, string accessToken)
         {
-            //https://www.googleapis.com/drive/v3/files?q='17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS'+in+parents&fields=files%28id%2C+name%2C+parents%29
+            //https://www.googleapis.com/drive/v3/files?q='17sZ12Rgrfd_zsvlxCnuQzHbedNS9uTnS'+in+parents&fields=files%28id%2C+name%2C+modifiedTime%2C+parents%29
             var request = new HttpRequestMessage(HttpMethod.Get, 
-                $"drive/v3/files?q='{folderId}'+in+parents&fields=files%28id%2C+name%2C+trashed%2C+parents%29");
+                $"drive/v3/files?q='{folderId}'+in+parents&fields=files%28id%2C+name%2C+trashed%2C+modifiedTime%2C+parents%29");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
             request.Headers.Add("Accept", "application/json");
             request.Headers.CacheControl = new CacheControlHeaderValue(){NoCache = true};
@@ -248,6 +277,7 @@ namespace SigninQuickstart
 
             var request = new HttpRequestMessage(HttpMethod.Post, "drive/v3/files");
             request.Headers.Add("Authorization", "Bearer "+ accessToken);
+            request.Headers.Add("Accept","application/json");
             
             JsonObject jsonFolderObject = new JsonObject();
             jsonFolderObject.Add("name", brandFolderName);
