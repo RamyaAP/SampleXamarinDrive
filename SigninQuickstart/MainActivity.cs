@@ -199,7 +199,7 @@ namespace SigninQuickstart
 
             Stream stream = Application.Context.Assets.Open("t");
             sessionRequest.Content = new StreamContent(stream);
-            sessionRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            sessionRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("*/*");
 
             var sessionResponse = await _httpClient.SendAsync(sessionRequest);
             sessionResponse.EnsureSuccessStatusCode();
